@@ -1,0 +1,3 @@
+# go-mod-cleanup
+
+WIP
