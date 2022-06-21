@@ -23,6 +23,12 @@ func main() {
 
 	ReadDependencies(os.Args[1])
 
+	//Register edges into maps
+	for _, e := range edges {
+		fmt.Println(AddToMap(e.Dependency))
+		fmt.Println(AddToMap(e.Module))
+	}
+
 	WriteDependencies("gomod-simple.txt", edges)
 }
 
