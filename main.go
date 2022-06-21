@@ -8,15 +8,25 @@ import (
 	"strings"
 )
 
+var edges []Dependency
+var dependencyGraph [][]bool
+var idMap map[int]string
+var dependencyMap map[string]int
+var currId int
+
 type Dependency struct {
-	Parent string
-	Names  []string
+	Module     string
+	Dependency string
 }
 
 func main() {
-	filename := os.Args[1]
-	//filename := "input.txt"
-	var dependencies []Dependency
+
+	ReadDependencies(os.Args[1])
+
+	WriteDependencies("gomod-simple.txt", edges)
+}
+
+func ReadDependencies(filename string) {
 
 	file, err := os.Open(filename)
 	if err != nil {
@@ -29,25 +39,25 @@ func main() {
 		lineScanner := bufio.NewScanner(strings.NewReader(scanner.Text()))
 		lineScanner.Split(bufio.ScanWords)
 
-		var parent string
+		var module string
 		if lineScanner.Scan() {
-			parent = lineScanner.Text()
+			module = lineScanner.Text()
 		} else {
 			panic(errors.New("No parent"))
 		}
 
-		var names []string
-		for lineScanner.Scan() {
-			names = append(names, lineScanner.Text())
+		var dependency string
+		if lineScanner.Scan() {
+			dependency = lineScanner.Text()
+		} else {
+			panic(errors.New("No Dependecy"))
 		}
 
-		dependencies = append(dependencies, Dependency{
-			Parent: parent,
-			Names:  names,
+		edges = append(edges, Dependency{
+			Module:     module,
+			Dependency: dependency,
 		})
 	}
-
-	WriteDependencies("gomod-simple.txt", dependencies)
 }
 
 func WriteDependencies(filename string, dependencies []Dependency) {
@@ -64,11 +74,24 @@ func WriteDependencies(filename string, dependencies []Dependency) {
 	var currParent string
 	for _, d := range dependencies {
 
-		if currParent != d.Parent {
-			currParent = d.Parent
-			file.Write([]byte("\n" + d.Parent + "\n"))
+		if currParent != d.Module {
+			currParent = d.Module
+			file.Write([]byte("\n" + d.Module + "\n"))
 		}
 
-		file.Write([]byte("\t" + d.Names[0] + "\n"))
+		file.Write([]byte("\t" + d.Dependency + "\n"))
 	}
+}
+
+func AddToMap(dependency string) int {
+	id, exists := dependencyMap[dependency]
+
+	if exists {
+		return id
+	}
+
+	dependencyMap[dependency] = currId
+	idMap[currId] = dependency
+	currId++
+	return dependencyMap[dependency]
 }
