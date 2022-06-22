@@ -28,20 +28,19 @@ func init() {
 func main() {
 
 	//ReadDependencies(os.Args[1])
-	ReadDependencies("input.txt")
+	ReadDependencies("input_small.txt")
 
 	//Register edges into maps
-	// for _, e := range edges {
-	// 	fmt.Println(AddToMap(e.Dependency))
-	// 	fmt.Println(AddToMap(e.Module))
-	// }
+	for _, e := range edges {
+		fmt.Println(AddToMap(e.Module), " -> ", AddToMap(e.Dependency))
+	}
 
 	//From now on, no changes to edges, graph, map, etc
 
 	//Build Graph
 	graph := New()
 	for _, e := range edges {
-		graph.AddDependency(e.Module, e.Dependency)
+		graph.AddDependency(fmt.Sprint(dm[e.Module]), fmt.Sprint(dm[e.Dependency]))
 	}
 	fmt.Println(StringifyOrderedTier(graph.Tier()))
 
