@@ -10,13 +10,18 @@ import (
 
 var edges []Dependency
 var dependencyGraph [][]bool
-var idMap map[int]string
-var dependencyMap map[string]int
-var currId int
+var im map[int]string
+var dm map[string]int
+var currId int = 0
 
 type Dependency struct {
 	Module     string
 	Dependency string
+}
+
+func init() {
+	im = make(map[int]string)
+	dm = make(map[string]int)
 }
 
 func main() {
@@ -29,8 +34,65 @@ func main() {
 		fmt.Println(AddToMap(e.Module))
 	}
 
+	//From now on, no changes to edges, graph, map, etc
+
+	//Build Graph
+	dependencyGraph = make([][]bool, currId)
+	for i := range dependencyGraph {
+		dependencyGraph[i] = make([]bool, currId)
+	}
+
+	for _, e := range edges {
+		dependencyGraph[dm[e.Module]][dm[e.Dependency]] = true
+	}
+
+	fmt.Println(StringifyBoolArr2(dependencyGraph))
+
 	WriteDependencies("gomod-simple.txt", edges)
 }
+
+/* ========== Petty Helpers ========== */
+
+func AddToMap(dependency string) int {
+	id, exists := dm[dependency]
+
+	if exists {
+		return id
+	}
+
+	dm[dependency] = currId
+	im[currId] = dependency
+	currId++
+	return dm[dependency]
+}
+
+/* ========== Standard Helpers ========== */
+
+func StringifyBoolArr2(arr [][]bool) string {
+
+	ret := "----- Bool 2D Arr -----\n"
+	for i := range arr {
+		for j := range arr[i] {
+
+			//1/0
+			if arr[i][j] {
+				ret += "1"
+			} else {
+				ret += "0"
+			}
+
+			//Delimiter
+			if j != len(arr[i])-1 {
+				ret = ret + " "
+			}
+		}
+		ret += "\n"
+	}
+
+	return ret + "----------END----------\n"
+}
+
+/* ========== File IO ========== */
 
 func ReadDependencies(filename string) {
 
@@ -87,17 +149,4 @@ func WriteDependencies(filename string, dependencies []Dependency) {
 
 		file.Write([]byte("\t" + d.Dependency + "\n"))
 	}
-}
-
-func AddToMap(dependency string) int {
-	id, exists := dependencyMap[dependency]
-
-	if exists {
-		return id
-	}
-
-	dependencyMap[dependency] = currId
-	idMap[currId] = dependency
-	currId++
-	return dependencyMap[dependency]
 }
