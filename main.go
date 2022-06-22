@@ -9,7 +9,8 @@ import (
 )
 
 var edges []Dependency
-var dependencyGraph [][]bool
+
+//var dependencyGraph [][]bool
 var im map[int]string
 var dm map[string]int
 var currId int = 0
@@ -26,27 +27,23 @@ func init() {
 
 func main() {
 
-	ReadDependencies(os.Args[1])
+	//ReadDependencies(os.Args[1])
+	ReadDependencies("input.txt")
 
 	//Register edges into maps
-	for _, e := range edges {
-		fmt.Println(AddToMap(e.Dependency))
-		fmt.Println(AddToMap(e.Module))
-	}
+	// for _, e := range edges {
+	// 	fmt.Println(AddToMap(e.Dependency))
+	// 	fmt.Println(AddToMap(e.Module))
+	// }
 
 	//From now on, no changes to edges, graph, map, etc
 
 	//Build Graph
-	dependencyGraph = make([][]bool, currId)
-	for i := range dependencyGraph {
-		dependencyGraph[i] = make([]bool, currId)
-	}
-
+	graph := New()
 	for _, e := range edges {
-		dependencyGraph[dm[e.Module]][dm[e.Dependency]] = true
+		graph.AddDependency(e.Module, e.Dependency)
 	}
-
-	fmt.Println(StringifyBoolArr2(dependencyGraph))
+	fmt.Println(StringifyOrderedTier(graph.Tier()))
 
 	WriteDependencies("gomod-simple.txt", edges)
 }
