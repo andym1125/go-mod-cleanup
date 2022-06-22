@@ -42,50 +42,18 @@ func main() {
 	for _, e := range edges {
 		graph.AddDependency(fmt.Sprint(dm[e.Module]), fmt.Sprint(dm[e.Dependency]))
 	}
+
 	fmt.Println(StringifyOrderedTier(graph.Tier()))
 
-	WriteDependencies("gomod-simple.txt", edges)
+	GenHTMLFromDependencyGraph(graph)
+	//DrawDependencies("Dependencies.html", graph)
+	//WriteDependencies("gomod-simple.txt", edges)
 }
 
-/* ========== Petty Helpers ========== */
+/* ========== Drawing ========== */
 
-func AddToMap(dependency string) int {
-	id, exists := dm[dependency]
+func DrawDependencies(filename string, graph DependencyGraph) {
 
-	if exists {
-		return id
-	}
-
-	dm[dependency] = currId
-	im[currId] = dependency
-	currId++
-	return dm[dependency]
-}
-
-/* ========== Standard Helpers ========== */
-
-func StringifyBoolArr2(arr [][]bool) string {
-
-	ret := "----- Bool 2D Arr -----\n"
-	for i := range arr {
-		for j := range arr[i] {
-
-			//1/0
-			if arr[i][j] {
-				ret += "1"
-			} else {
-				ret += "0"
-			}
-
-			//Delimiter
-			if j != len(arr[i])-1 {
-				ret = ret + " "
-			}
-		}
-		ret += "\n"
-	}
-
-	return ret + "----------END----------\n"
 }
 
 /* ========== File IO ========== */
@@ -145,4 +113,45 @@ func WriteDependencies(filename string, dependencies []Dependency) {
 
 		file.Write([]byte("\t" + d.Dependency + "\n"))
 	}
+}
+
+/* ========== Petty Helpers ========== */
+
+func AddToMap(dependency string) int {
+	id, exists := dm[dependency]
+
+	if exists {
+		return id
+	}
+
+	dm[dependency] = currId
+	im[currId] = dependency
+	currId++
+	return dm[dependency]
+}
+
+/* ========== Standard Helpers ========== */
+
+func StringifyBoolArr2(arr [][]bool) string {
+
+	ret := "----- Bool 2D Arr -----\n"
+	for i := range arr {
+		for j := range arr[i] {
+
+			//1/0
+			if arr[i][j] {
+				ret += "1"
+			} else {
+				ret += "0"
+			}
+
+			//Delimiter
+			if j != len(arr[i])-1 {
+				ret = ret + " "
+			}
+		}
+		ret += "\n"
+	}
+
+	return ret + "----------END----------\n"
 }
