@@ -23,6 +23,12 @@ func (el BuiltElement) Build() (html string) {
 
 /* ========== */
 
+var StripSvgRegex *regexp.Regexp
+
+func init() {
+	StripSvgRegex = regexp.MustCompile(`<\s*svg[^<>]*>`)
+}
+
 func Inject(builtHtml string, injectTag string, injectHtml string) (string, error) {
 
 	injectRegx := regexp.MustCompile(fmt.Sprintf(`<[^<>]*%s[^<>]*>[^<>]*<[^<>]*/[^<>]*%s[^<>]*>`, injectTag, injectTag))
@@ -42,6 +48,12 @@ func Inject(builtHtml string, injectTag string, injectHtml string) (string, erro
 
 func GetInjectGomEl(injectTag string) *gom.Element {
 	return gom.H(injectTag)
+}
+
+func StripSvg(svg string) string {
+	loc := StripSvgRegex.FindStringIndex(svg)
+	newSvg := svg[loc[0]:]
+	return newSvg
 }
 
 func WrapInHtml(el *gom.Element) *gom.Element {

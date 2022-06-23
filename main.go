@@ -66,7 +66,7 @@ func main() {
 			}
 		}
 
-		WriteSVG(fmt.Sprintf("go_mod_graphs/graph%d.svg", baseModule), currEdges)
+		WriteSVG(fmt.Sprintf("go_mod_graphs/graph%d.html", baseModule), currEdges)
 	}
 }
 
@@ -102,9 +102,34 @@ func WriteSVG(filestr string, edgeArr []Dependency) {
 	}
 
 	//Write Graphviz
-	if err := g.RenderFilename(graph, graphviz.SVG, filestr); err != nil {
+
+	//Get SVG
+	var strBuilder strings.Builder
+	g.Render(graph, graphviz.SVG, &strBuilder)
+	svgString := StripSvg(strBuilder.String())
+
+	//Gen HTML
+	injectStr := strings.Split(filestr, "/")[1]
+	htmlGom := WrapInHtml(GetInjectGomEl(injectStr))
+
+	//Inject Html
+	output, err := Inject(htmlGom.Build(), injectStr, svgString)
+	if err != nil {
 		panic(err)
 	}
+
+	//Write to file
+	file, err := os.Create(filestr)
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+
+	file.Write([]byte(output))
+
+	// if err := g.RenderFilename(graph, graphviz.SVG, filestr); err != nil {
+	// 	panic(err)
+	// }
 }
 
 func AddGvNode(id int, graph *cgraph.Graph) *cgraph.Node {
