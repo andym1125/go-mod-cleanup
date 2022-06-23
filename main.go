@@ -106,7 +106,6 @@ func WriteSVG(filestr string, edgeArr []Dependency) {
 	}
 
 	//Write Graphviz
-
 	//Get SVG
 	var strBuilder strings.Builder
 	g.Render(graph, graphviz.SVG, &strBuilder)
@@ -128,12 +127,7 @@ func WriteSVG(filestr string, edgeArr []Dependency) {
 		panic(err)
 	}
 	defer file.Close()
-
 	file.Write([]byte(output))
-
-	// if err := g.RenderFilename(graph, graphviz.SVG, filestr); err != nil {
-	// 	panic(err)
-	// }
 }
 
 func AddGvNode(id int, graph *cgraph.Graph) *cgraph.Node {
