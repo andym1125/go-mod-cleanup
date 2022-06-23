@@ -6,18 +6,21 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/goccy/go-graphviz"
+	"github.com/goccy/go-graphviz/cgraph"
 )
 
 var edges []Dependency
+var gvNodes map[int]*cgraph.Node
 
-//var dependencyGraph [][]bool
 var im map[int]string
 var dm map[string]int
-var currId int = 0
+var currId int
 
 type Dependency struct {
-	Module     string
-	Dependency string
+	Module     int
+	Dependency int
 }
 
 func init() {
@@ -26,38 +29,104 @@ func init() {
 }
 
 func main() {
+	ReadDependencies("input.txt")
 
-	//ReadDependencies(os.Args[1])
-	ReadDependencies("input_small.txt")
+	//Determine base modules
+	baseModules := make([]int, 0)
+	for target, _ := range im {
 
-	//Register edges into maps
-	for _, e := range edges {
-		fmt.Println(AddToMap(e.Module), " -> ", AddToMap(e.Dependency))
+		isBase := true
+		for _, curr := range edges {
+			if target == curr.Dependency {
+				isBase = false
+			}
+		}
+
+		if isBase {
+			baseModules = append(baseModules, target)
+		}
 	}
 
-	//From now on, no changes to edges, graph, map, etc
+	//For each base module, determine set of edges that are needed to build a graph and build it
+	for _, baseModule := range baseModules {
+		currModuleQ := NewQueue()
+		currModuleQ.Push(baseModule)
+		currEdges := make([]Dependency, 0)
 
-	//Build Graph
-	graph := New()
-	for _, e := range edges {
-		graph.AddDependency(fmt.Sprint(dm[e.Module]), fmt.Sprint(dm[e.Dependency]))
+		//Search recursively for dependency chain
+		for currModuleQ.Len() > 0 {
+			currId := currModuleQ.Poll()
+
+			//Search through all edges
+			for _, e := range edges {
+				if e.Module == currId {
+					currEdges = append(currEdges, e)
+					currModuleQ.Push(e.Dependency)
+				}
+			}
+		}
+
+		WriteSVG(fmt.Sprintf("graphs/graph%d.svg", baseModule), currEdges)
 	}
 
-	fmt.Println(StringifyOrderedTier(graph.Tier()))
+	//Create a set of edges for each base module
 
-	GenHTMLFromDependencyGraph(graph)
-	//DrawDependencies("Dependencies.html", graph)
-	//WriteDependencies("gomod-simple.txt", edges)
+	WriteSVG("graph.svg", edges)
 }
 
-/* ========== Drawing ========== */
+/* ===== Graphviz ===== */
 
-func DrawDependencies(filename string, graph DependencyGraph) {
+func WriteSVG(filestr string, edgeArr []Dependency) {
 
+	//Graphviz init
+	g := graphviz.New()
+	graph, err := g.Graph()
+	if err != nil {
+		panic(err)
+	}
+	defer func() {
+		if err := graph.Close(); err != nil {
+			panic(err)
+		}
+		g.Close()
+	}()
+
+	//Add edges
+	for _, d := range edgeArr {
+		module := AddGvNode(d.Module, graph)
+		dependency := AddGvNode(d.Dependency, graph)
+
+		_, err := graph.CreateEdge(
+			fmt.Sprintf("%d-%d", d.Module, d.Dependency),
+			module, dependency,
+		)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	//Write Graphviz
+	if err := g.RenderFilename(graph, graphviz.SVG, filestr); err != nil {
+		panic(err)
+	}
 }
 
-/* ========== File IO ========== */
+func AddGvNode(id int, graph *cgraph.Graph) *cgraph.Node {
 
+	node, exists := gvNodes[id]
+	if exists {
+		return node
+	}
+
+	n, err := graph.CreateNode(fmt.Sprint(id))
+	if err != nil {
+		panic(err)
+	}
+
+	return n
+}
+
+/* ===== Rand ===== */
 func ReadDependencies(filename string) {
 
 	file, err := os.Open(filename)
@@ -85,34 +154,18 @@ func ReadDependencies(filename string) {
 			panic(errors.New("No Dependecy"))
 		}
 
-		edges = append(edges, Dependency{
-			Module:     module,
-			Dependency: dependency,
-		})
+		newDependency := Dependency{
+			Module:     AddToMap(module),
+			Dependency: AddToMap(dependency),
+		}
+		edges = append(edges, newDependency)
 	}
 }
 
-func WriteDependencies(filename string, dependencies []Dependency) {
-	if len(dependencies) == 0 {
-		fmt.Println("No dependencies. Not writing")
-	}
-
-	file, err := os.Create(filename)
-	if err != nil {
-		panic(err)
-	}
-	defer file.Close()
-
-	var currParent string
-	for _, d := range dependencies {
-
-		if currParent != d.Module {
-			currParent = d.Module
-			file.Write([]byte("\n" + d.Module + "\n"))
-		}
-
-		file.Write([]byte("\t" + d.Dependency + "\n"))
-	}
+func init() {
+	gvNodes = make(map[int]*cgraph.Node)
+	im = make(map[int]string)
+	dm = make(map[string]int)
 }
 
 /* ========== Petty Helpers ========== */
@@ -128,30 +181,4 @@ func AddToMap(dependency string) int {
 	im[currId] = dependency
 	currId++
 	return dm[dependency]
-}
-
-/* ========== Standard Helpers ========== */
-
-func StringifyBoolArr2(arr [][]bool) string {
-
-	ret := "----- Bool 2D Arr -----\n"
-	for i := range arr {
-		for j := range arr[i] {
-
-			//1/0
-			if arr[i][j] {
-				ret += "1"
-			} else {
-				ret += "0"
-			}
-
-			//Delimiter
-			if j != len(arr[i])-1 {
-				ret = ret + " "
-			}
-		}
-		ret += "\n"
-	}
-
-	return ret + "----------END----------\n"
 }

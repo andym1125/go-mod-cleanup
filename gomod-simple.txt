@@ -1,5 +1,3 @@
-
-github.com/docker/distribution@v0.0.0-20190905152932-14b96e55d84c
 	github.com/yvasiyarov/go-metrics@v0.0.0-20140926110328-57bccd1ccd43
 	github.com/yvasiyarov/gorelic@v0.0.0-20141212073537-a9bba5b9ab50
 	github.com/yvasiyarov/newrelic_platform_go@v0.0.0-20140908184405-b21fdbd4370f
