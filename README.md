@@ -1,12 +1,15 @@
 ## go-mod-cleanup
-# Version 1.
+# Version 3.
 
 # Setup
-`git clone https://github.com/andym1125/go-mod-cleanup`<br>
-`cd go-mod-cleanup`<br>
-`go install`<br>
+`mkdir ~/.go-mod-cleanup`<br>
+`cd ~/.go-mod-cleanup`<br>
+`git clone https://github.com/andym1125/go-mod-cleanup gitfiles`<br>
+`cp ./gitfiles/cmd/go-mod-cleanup modclean`<br>
+`rm -rf gitfiles`<br>
 
 # Use
+Now, ensuring you're in your project directory:
 `go mod graph > <Your file name>`<br>
-`/Users/<User>/go/bin/go-mod-cleanup <Your file name>`<br>
-`nano gomod-simple.txt`
+`~/.go-mod-cleanup/modclean <Your file name>`<br>
+Optionally remove HTML files: `rm -rf go_mod_graphs`
