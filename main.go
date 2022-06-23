@@ -66,6 +66,10 @@ func main() {
 			}
 		}
 
+		err := os.Mkdir("go_mod_graphs", 0750)
+		if err != nil && !os.IsExist(err) {
+			panic(err)
+		}
 		WriteSVG(fmt.Sprintf("go_mod_graphs/graph%d.html", baseModule), currEdges)
 	}
 }
