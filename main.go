@@ -50,10 +50,10 @@ func main() {
 	//For each base module, determine set of edges that are needed to build a graph and build it
 	for _, baseModule := range baseModules {
 		currModuleQ := NewQueue()
-		currModuleQ.Push(baseModule)
 		currEdges := make([]Dependency, 0)
 
 		//Search recursively for dependency chain
+		currModuleQ.Push(baseModule)
 		for currModuleQ.Len() > 0 {
 			currId := currModuleQ.Poll()
 
@@ -66,12 +66,8 @@ func main() {
 			}
 		}
 
-		WriteSVG(fmt.Sprintf("graphs/graph%d.svg", baseModule), currEdges)
+		WriteSVG(fmt.Sprintf("go_mod_graphs/graph%d.svg", baseModule), currEdges)
 	}
-
-	//Create a set of edges for each base module
-
-	WriteSVG("graph.svg", edges)
 }
 
 /* ===== Graphviz ===== */
