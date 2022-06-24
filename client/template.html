@@ -1,0 +1,57 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/framset.dtd">
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+        <title>View Go Dependencies</title>
+        <style>
+            body {
+                margin:0;
+                padding:0;
+            }
+
+            .flex-container {
+                display: flex;
+                width: 100vw;
+                height: 100vh;
+            }
+
+            #base-container {
+                flex: 25%;
+                background-color: red;
+                overflow-y: auto;
+            }
+
+            #svg-container {
+                flex:50%;
+                background-color: white;
+                overflow-y: auto;
+                overflow-x: auto;
+            }
+
+            #key-container {
+                flex:25%;
+                background-color: blue;
+            }
+        </style>
+        <script>
+            let baseModule=1
+            function changeBaseModule() {
+                alert(baseModule)
+            }
+        </script>
+    </head>
+
+    <div class="flex-container">
+        <div id="base-container">
+            <button onclick="baseModule=3;changeBaseModule()">3</button>
+        </div>
+        <div id="svg-container">
+            <img src="https://i.etsystatic.com/14652458/r/il/32b5cc/1542847490/il_fullxfull.1542847490_snfb.jpg">
+        </div>
+        <div id="key-container">
+
+        </div>
+    </div>
+
+    
+</html>

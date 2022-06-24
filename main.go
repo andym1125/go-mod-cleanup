@@ -47,9 +47,26 @@ func main() {
 		}
 	}
 
+	//Short Circuit. If there's only 1 base modules and more than 150 edges, we've likely landed on
+	//a "I'm my own dependency" issue. Refactor base modules to include each dependency of the "superbase"
+	//module as a base module
+	if len(baseModules) <= 1 && len(edges) > 150 {
+		superbase := baseModules[0]
+		baseModules = make([]int, 0)
+		for _, curr := range edges {
+			if curr.Module == superbase {
+				baseModules = append(baseModules, curr.Dependency)
+			}
+		}
+	}
+
+	fmt.Println(baseModules)
+
 	//For each base module, determine set of edges that are needed to build a graph and build it
 	for _, baseModule := range baseModules {
+		fmt.Println(fmt.Sprintf("Graphing %s", im[baseModule]))
 		currModuleQ := NewQueue()
+		modulesSearched := NewSet()
 		currEdges := make([]Dependency, 0)
 
 		//Search recursively for dependency chain
@@ -61,7 +78,10 @@ func main() {
 			for _, e := range edges {
 				if e.Module == currId {
 					currEdges = append(currEdges, e)
-					currModuleQ.Push(e.Dependency)
+					if !modulesSearched.Contains(e.Dependency) {
+						currModuleQ.Push(e.Dependency)
+						modulesSearched.Add(e.Dependency)
+					}
 				}
 			}
 		}
@@ -70,7 +90,7 @@ func main() {
 		if err != nil && !os.IsExist(err) {
 			panic(err)
 		}
-		WriteSVG(fmt.Sprintf("go_mod_graphs/graph%d.html", baseModule), currEdges)
+		WriteSVG(fmt.Sprintf("go_mod_graphs/graph%d.svg", baseModule), currEdges)
 	}
 }
 
@@ -105,29 +125,9 @@ func WriteSVG(filestr string, edgeArr []Dependency) {
 		}
 	}
 
-	//Write Graphviz
-	//Get SVG
-	var strBuilder strings.Builder
-	g.Render(graph, graphviz.SVG, &strBuilder)
-	svgString := StripSvg(strBuilder.String())
-
-	//Gen HTML
-	injectStr := strings.Split(filestr, "/")[1]
-	htmlGom := WrapInHtml(GetInjectGomEl(injectStr))
-
-	//Inject Html
-	output, err := Inject(htmlGom.Build(), injectStr, svgString)
-	if err != nil {
+	if err := g.RenderFilename(graph, graphviz.SVG, filestr); err != nil {
 		panic(err)
 	}
-
-	//Write to file
-	file, err := os.Create(filestr)
-	if err != nil {
-		panic(err)
-	}
-	defer file.Close()
-	file.Write([]byte(output))
 }
 
 func AddGvNode(id int, graph *cgraph.Graph) *cgraph.Node {
