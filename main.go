@@ -106,6 +106,11 @@ func CliNavigate(root int, back *Queue) {
 	case 0:
 		CliMenu(root)
 	case 1:
+		if root == -1 {
+			CliNavigate(-1, nil)
+			break
+		}
+
 		newRoot := back.Poll().(int)
 		CliNavigate(newRoot, back)
 	default:
@@ -115,7 +120,9 @@ func CliNavigate(root int, back *Queue) {
 }
 
 func CliMenu(root int) {
-
+	// choice := CliMultipleChoice(
+	// 	fmt.Sprintf("Choices for %s", im[root])
+	// )
 }
 
 func CliMultipleChoice(prompt string, choices []string) int {
@@ -279,7 +286,13 @@ func AddToMap(dependency string) int {
 func IdsToModules(ids []int) []string {
 	var ret []string
 	for _, i := range ids {
-		ret = append(ret, im[i])
+
+		node, err := agraph.GetNode(i)
+		if err != nil {
+			panic(err)
+		}
+
+		ret = append(ret, fmt.Sprintf("[%d]\t%s", len(node.GetChildren()), im[i]))
 	}
 	return ret
 }
