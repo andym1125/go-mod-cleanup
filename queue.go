@@ -21,20 +21,24 @@ func (q *Queue) Push(el any) {
 /* ===== Set ===== */
 
 type Set struct {
-	els []int
+	els []any
 }
 
 func NewSet() *Set {
-	return &Set{els: make([]int, 0)}
+	return &Set{els: make([]any, 0)}
 }
 
-func (s *Set) Add(el int) {
+func (s *Set) Add(el any) {
 	if !s.Contains(el) {
 		s.els = append(s.els, el)
 	}
 }
 
-func (s *Set) Contains(el int) bool {
+func (s *Set) Len() int {
+	return len(s.els)
+}
+
+func (s *Set) Contains(el any) bool {
 	ret := false
 	for _, a := range s.els {
 		if a == el {
@@ -44,8 +48,8 @@ func (s *Set) Contains(el int) bool {
 	return ret
 }
 
-func (s *Set) Get() []int {
-	ret := make([]int, 0)
+func (s *Set) Get() []any {
+	ret := make([]any, 0)
 	for _, a := range s.els {
 		ret = append(ret, a)
 	}

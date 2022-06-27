@@ -21,7 +21,28 @@ func (el BuiltElement) Build() (html string) {
 	return el.rawHtml
 }
 
-/* ========== */
+/* ===== Specific DOM funcs ===== */
+//<button onclick="baseModule=3;changeBaseModule()">3</button>
+
+func GenerateBasicHtml() *gom.Element {
+	div := gom.Div.A(gom.Attribute{Name: "class", Value: "flex-container"}).C(
+		gom.Div.A(gom.Attribute{Name: "class", Value: "base-container"}).C(
+			NewBaseModuleButton(1),
+		),
+		gom.Div.A(gom.Attribute{Name: "class", Value: "svg-container"}).C(
+			gom.H("img").A(gom.Attribute{Name: "src", Value: "https://i.etsystatic.com/14652458/r/il/32b5cc/1542847490/il_fullxfull.1542847490_snfb.jpg"}),
+		),
+		gom.Div.A(gom.Attribute{Name: "class", Value: "key-container"}),
+	)
+	return div
+}
+
+func NewBaseModuleButton(moduleId int) *gom.Element {
+	button := gom.H("button").A(
+		gom.Attribute{Name: "onclick", Value: fmt.Sprintf("baseModule=%d;changeBaseModule()", moduleId)},
+	)
+	return button
+}
 
 var StripSvgRegex *regexp.Regexp
 

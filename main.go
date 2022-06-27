@@ -31,72 +31,73 @@ func init() {
 func main() {
 	ReadDependencies("input.txt")
 
+	graph := NewGraph()
+	for _, e := range edges {
+		graph.AddEdge(im[e.Module], im[e.Dependency])
+	}
+
+	graph.Print()
+	subgraphEdges := NewSet()
+	graph.GetEdges(0, subgraphEdges, nil)
+	fmt.Printf("%d %d", len(edges), subgraphEdges.Len())
+
 	//Determine base modules
-	baseModules := make([]int, 0)
-	for target, _ := range im {
-
-		isBase := true
-		for _, curr := range edges {
-			if target == curr.Dependency {
-				isBase = false
-			}
-		}
-
-		if isBase {
-			baseModules = append(baseModules, target)
-		}
+	baseModules := graph.GetNonChildren()
+	if len(baseModules) == 0 {
+		panic(errors.New("No dependencies"))
 	}
-
-	//Short Circuit. If there's only 1 base modules and more than 150 edges, we've likely landed on
-	//a "I'm my own dependency" issue. Refactor base modules to include each dependency of the "superbase"
-	//module as a base module
-	if len(baseModules) <= 1 && len(edges) > 150 {
-		superbase := baseModules[0]
-		baseModules = make([]int, 0)
-		for _, curr := range edges {
-			if curr.Module == superbase {
-				baseModules = append(baseModules, curr.Dependency)
-			}
-		}
-	}
-
-	fmt.Println(baseModules)
-
-	//For each base module, determine set of edges that are needed to build a graph and build it
-	for _, baseModule := range baseModules {
-		fmt.Println(fmt.Sprintf("Graphing %s", im[baseModule]))
-		currModuleQ := NewQueue()
-		modulesSearched := NewSet()
-		currEdges := make([]Dependency, 0)
-
-		//Search recursively for dependency chain
-		currModuleQ.Push(baseModule)
-		for currModuleQ.Len() > 0 {
-			currId := currModuleQ.Poll()
-
-			//Search through all edges
-			for _, e := range edges {
-				if e.Module == currId {
-					currEdges = append(currEdges, e)
-					if !modulesSearched.Contains(e.Dependency) {
-						currModuleQ.Push(e.Dependency)
-						modulesSearched.Add(e.Dependency)
-					}
-				}
-			}
-		}
-
-		err := os.Mkdir("go_mod_graphs", 0750)
-		if err != nil && !os.IsExist(err) {
+	if len(baseModules) == 1 {
+		superbase, err := graph.GetNode(baseModules[0])
+		if err != nil {
 			panic(err)
 		}
-		WriteSVG(fmt.Sprintf("go_mod_graphs/graph%d.svg", baseModule), currEdges)
+
+		baseModules = make([]int, 0)
+		for _, n := range superbase.GetChildren() {
+			baseModules = append(baseModules, n.Id)
+		}
+	}
+
+	//For each base module, determine set of edges that are needed to build a graph and build it
+	err := os.Mkdir("go_mod_graphs", 0750)
+	if err != nil && !os.IsExist(err) {
+		panic(err)
+	}
+	for _, baseModule := range baseModules {
+
+		edgeSet := NewSet()
+		graph.GetEdges(baseModule, edgeSet, nil)
+		var edgeArr []Edge
+		for _, item := range edgeSet.Get() { //TODO: hacky
+			edgeArr = append(edgeArr, item.(Edge))
+		}
+		WriteSVG(fmt.Sprintf("go_mod_graphs/graph%d", baseModule), baseModule, graph, edgeArr)
 	}
 }
 
 /* ===== Graphviz ===== */
 
-func WriteSVG(filestr string, edgeArr []Dependency) {
+func WriteSVG(filestr string, baseModule int, agraph *Graph, edgeArr []Edge) {
+
+	//Split function
+	if len(edgeArr) > 1000 {
+
+		node, err := agraph.GetNode(baseModule)
+		if err != nil {
+			panic(err)
+		}
+		for _, child := range node.GetChildren() {
+			edgeSet := NewSet()
+			agraph.GetEdges(child.Id, edgeSet, nil)
+			var edgeArr []Edge
+			for _, item := range edgeSet.Get() { //TODO: hacky
+				edgeArr = append(edgeArr, item.(Edge))
+			}
+			WriteSVG(fmt.Sprintf(filestr+"-%d", child.Id), child.Id, agraph, edgeArr)
+		}
+	}
+
+	fmt.Println(fmt.Sprintf("Graphing %s", im[baseModule]))
 
 	//Graphviz init
 	g := graphviz.New()
@@ -113,11 +114,11 @@ func WriteSVG(filestr string, edgeArr []Dependency) {
 
 	//Add edges
 	for _, d := range edgeArr {
-		module := AddGvNode(d.Module, graph)
-		dependency := AddGvNode(d.Dependency, graph)
+		module := AddGvNode(d.From, graph)
+		dependency := AddGvNode(d.To, graph)
 
 		_, err := graph.CreateEdge(
-			fmt.Sprintf("%d-%d", d.Module, d.Dependency),
+			fmt.Sprintf("%d-%d", d.From, d.To),
 			module, dependency,
 		)
 		if err != nil {
@@ -125,7 +126,7 @@ func WriteSVG(filestr string, edgeArr []Dependency) {
 		}
 	}
 
-	if err := g.RenderFilename(graph, graphviz.SVG, filestr); err != nil {
+	if err := g.RenderFilename(graph, graphviz.SVG, filestr+".svg"); err != nil {
 		panic(err)
 	}
 }
