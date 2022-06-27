@@ -37,6 +37,18 @@ func (g *Graph) GetNode(id int) (*GraphNode, error) {
 	return node, nil
 }
 
+func (g *Graph) GetNodeByValue(val string) (*GraphNode, error) {
+	id, exists := g.ids[val]
+	if !exists {
+		return nil, errors.New("Node not found")
+	}
+	node, err := g.GetNode(id)
+	if err != nil {
+		return nil, errors.New("Node not found")
+	}
+	return node, nil
+}
+
 func (g *Graph) MustGetNode(id int) *GraphNode {
 	node, exists := g.nodes[id]
 	if exists {
@@ -133,11 +145,27 @@ func (n *GraphNode) GetChildren() []*GraphNode {
 	return ret
 }
 
+func (n *GraphNode) GetChildrenIds() []int {
+	var ret []int
+	for _, n := range n.Children {
+		ret = append(ret, n.Id)
+	}
+	return ret
+}
+
 //shallow copy
 func (n *GraphNode) GetParents() []*GraphNode {
 	var ret []*GraphNode
 	for _, n := range n.Parents {
 		ret = append(ret, n)
+	}
+	return ret
+}
+
+func (n *GraphNode) GetParentsIds() []int {
+	var ret []int
+	for _, n := range n.Parents {
+		ret = append(ret, n.Id)
 	}
 	return ret
 }

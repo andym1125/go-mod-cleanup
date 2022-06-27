@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/goccy/go-graphviz"
@@ -13,6 +14,8 @@ import (
 
 var edges []Dependency
 var gvNodes map[int]*cgraph.Node
+var baseModules []int
+var agraph *Graph
 
 var im map[int]string
 var dm map[string]int
@@ -31,23 +34,18 @@ func init() {
 func main() {
 	ReadDependencies("input.txt")
 
-	graph := NewGraph()
+	agraph = NewGraph()
 	for _, e := range edges {
-		graph.AddEdge(im[e.Module], im[e.Dependency])
+		agraph.AddEdge(im[e.Module], im[e.Dependency])
 	}
 
-	graph.Print()
-	subgraphEdges := NewSet()
-	graph.GetEdges(0, subgraphEdges, nil)
-	fmt.Printf("%d %d", len(edges), subgraphEdges.Len())
-
 	//Determine base modules
-	baseModules := graph.GetNonChildren()
+	baseModules = agraph.GetNonChildren()
 	if len(baseModules) == 0 {
 		panic(errors.New("No dependencies"))
 	}
 	if len(baseModules) == 1 {
-		superbase, err := graph.GetNode(baseModules[0])
+		superbase, err := agraph.GetNode(baseModules[0])
 		if err != nil {
 			panic(err)
 		}
@@ -58,21 +56,96 @@ func main() {
 		}
 	}
 
-	//For each base module, determine set of edges that are needed to build a graph and build it
-	err := os.Mkdir("go_mod_graphs", 0750)
-	if err != nil && !os.IsExist(err) {
-		panic(err)
-	}
-	for _, baseModule := range baseModules {
+	CliNavigate(-1, nil)
 
-		edgeSet := NewSet()
-		graph.GetEdges(baseModule, edgeSet, nil)
-		var edgeArr []Edge
-		for _, item := range edgeSet.Get() { //TODO: hacky
-			edgeArr = append(edgeArr, item.(Edge))
+	//For each base module, determine set of edges that are needed to build a graph and build it
+	// err := os.Mkdir("go_mod_graphs", 0750)
+	// if err != nil && !os.IsExist(err) {
+	// 	panic(err)
+	// }
+	// for _, baseModule := range baseModules {
+
+	// 	edgeSet := NewSet()
+	// 	graph.GetEdges(baseModule, edgeSet, nil)
+	// 	var edgeArr []Edge
+	// 	for _, item := range edgeSet.Get() { //TODO: hacky
+	// 		edgeArr = append(edgeArr, item.(Edge))
+	// 	}
+	// 	WriteSVG(fmt.Sprintf("go_mod_graphs/graph%d", baseModule), baseModule, graph, edgeArr)
+	// }
+}
+
+/* ===== CLI ===== */
+
+func CliNavigate(root int, back *Queue) {
+	fmt.Println("---" + fmt.Sprint(root))
+
+	var submodules []int
+	directory := "Top-Level Dependencies"
+	if root == -1 {
+		submodules = baseModules
+		back = NewQueue()
+	} else {
+		node, err := agraph.GetNodeByValue(im[root])
+		if err != nil {
+			fmt.Println("Internal error, fail slow")
 		}
-		WriteSVG(fmt.Sprintf("go_mod_graphs/graph%d", baseModule), baseModule, graph, edgeArr)
+		directory = node.Value
+		submodules = node.GetChildrenIds()
 	}
+
+	choice := CliMultipleChoice(
+		fmt.Sprintf("Directory: %s", directory),
+		append(
+			[]string{"Module Menu", "Back"},
+			IdsToModules(submodules)...,
+		),
+	)
+
+	switch choice {
+	case 0:
+		CliMenu(root)
+	case 1:
+		newRoot := back.Poll().(int)
+		CliNavigate(newRoot, back)
+	default:
+		back.PushFront(root)
+		CliNavigate(submodules[choice-2], back)
+	}
+}
+
+func CliMenu(root int) {
+
+}
+
+func CliMultipleChoice(prompt string, choices []string) int {
+
+	chose := false
+	reader := bufio.NewReader(os.Stdin)
+	for !chose {
+		fmt.Println(prompt + ": (Choice)")
+		for i, s := range choices {
+			fmt.Println(fmt.Sprintf("(%d)\t%s", i, s))
+		}
+
+		input, err := reader.ReadString('\n')
+		if err != nil {
+			fmt.Println("An error occured while reading input. Please try again", err)
+			continue
+		}
+
+		choice, err := strconv.Atoi(strings.TrimSuffix(input, "\n"))
+		if err != nil {
+			fmt.Println("Invalid choice: Input is not a number. Please enter a number.")
+			continue
+		}
+		if choice < 0 || choice > len(choices) {
+			fmt.Println("Invalid choice. Please choose one of the valid choices below.")
+			continue
+		}
+		return choice
+	}
+	return -1
 }
 
 /* ===== Graphviz ===== */
@@ -201,4 +274,12 @@ func AddToMap(dependency string) int {
 	im[currId] = dependency
 	currId++
 	return dm[dependency]
+}
+
+func IdsToModules(ids []int) []string {
+	var ret []string
+	for _, i := range ids {
+		ret = append(ret, im[i])
+	}
+	return ret
 }
