@@ -104,7 +104,7 @@ func CliNavigate(root int, back *Queue) {
 
 	switch choice {
 	case 0:
-		CliMenu(root)
+		CliMenu(root, back)
 	case 1:
 		if root == -1 {
 			CliNavigate(-1, nil)
@@ -119,10 +119,27 @@ func CliNavigate(root int, back *Queue) {
 	}
 }
 
-func CliMenu(root int) {
-	// choice := CliMultipleChoice(
-	// 	fmt.Sprintf("Choices for %s", im[root])
-	// )
+func CliMenu(root int, back *Queue) {
+	choice := CliMultipleChoice(
+		fmt.Sprintf("Choices for %s", im[root]),
+		[]string{"Back to Directory", "Print SVG at this level to graph.svg..."},
+	)
+
+	switch choice {
+	case 0:
+		CliNavigate(root, back)
+	case 1:
+
+		edgeSet := NewSet()
+		agraph.GetEdges(root, edgeSet, nil)
+		var edgeArr []Edge
+		for _, a := range edgeSet.Get() {
+			edgeArr = append(edgeArr, a.(Edge))
+		}
+
+		WriteSVG("graph", root, agraph, edgeArr)
+		CliMenu(root, back)
+	}
 }
 
 func CliMultipleChoice(prompt string, choices []string) int {
@@ -160,22 +177,22 @@ func CliMultipleChoice(prompt string, choices []string) int {
 func WriteSVG(filestr string, baseModule int, agraph *Graph, edgeArr []Edge) {
 
 	//Split function
-	if len(edgeArr) > 1000 {
+	// if len(edgeArr) > 1000 {
 
-		node, err := agraph.GetNode(baseModule)
-		if err != nil {
-			panic(err)
-		}
-		for _, child := range node.GetChildren() {
-			edgeSet := NewSet()
-			agraph.GetEdges(child.Id, edgeSet, nil)
-			var edgeArr []Edge
-			for _, item := range edgeSet.Get() { //TODO: hacky
-				edgeArr = append(edgeArr, item.(Edge))
-			}
-			WriteSVG(fmt.Sprintf(filestr+"-%d", child.Id), child.Id, agraph, edgeArr)
-		}
-	}
+	// 	node, err := agraph.GetNode(baseModule)
+	// 	if err != nil {
+	// 		panic(err)
+	// 	}
+	// 	for _, child := range node.GetChildren() {
+	// 		edgeSet := NewSet()
+	// 		agraph.GetEdges(child.Id, edgeSet, nil)
+	// 		var edgeArr []Edge
+	// 		for _, item := range edgeSet.Get() { //TODO: hacky
+	// 			edgeArr = append(edgeArr, item.(Edge))
+	// 		}
+	// 		WriteSVG(fmt.Sprintf(filestr+"-%d", child.Id), child.Id, agraph, edgeArr)
+	// 	}
+	// }
 
 	fmt.Println(fmt.Sprintf("Graphing %s", im[baseModule]))
 
