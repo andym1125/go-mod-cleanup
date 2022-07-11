@@ -177,8 +177,8 @@ func WriteSVG(filestr string, baseModule int, agraph *Graph, edgeArr []Edge) {
 
 	//Add edges
 	for _, d := range edgeArr {
-		module := AddGvNode(d.From, graph)
-		dependency := AddGvNode(d.To, graph)
+		module := AddGvNode(d.From, graph, agraph)
+		dependency := AddGvNode(d.To, graph, agraph)
 
 		_, err := graph.CreateEdge(
 			fmt.Sprintf("%d-%d", d.From, d.To),
@@ -194,14 +194,18 @@ func WriteSVG(filestr string, baseModule int, agraph *Graph, edgeArr []Edge) {
 	}
 }
 
-func AddGvNode(id int, graph *cgraph.Graph) *cgraph.Node {
+func AddGvNode(id int, graph *cgraph.Graph, agraph *Graph) *cgraph.Node {
 
 	node, exists := gvNodes[id]
 	if exists {
 		return node
 	}
 
-	n, err := graph.CreateNode(fmt.Sprint(id))
+	trunc := ""
+	if agraph.IsTruncNode(id) {
+		trunc = "*"
+	}
+	n, err := graph.CreateNode(fmt.Sprintf("%d%s", id, trunc))
 	if err != nil {
 		panic(err)
 	}
@@ -275,7 +279,7 @@ func IdsToModules(ids []int) []string {
 			panic(err)
 		}
 
-		ret = append(ret, fmt.Sprintf("[%d]\t%s", len(node.GetChildren()), im[i]))
+		ret = append(ret, fmt.Sprintf("#%d\t[%d]\t%s\t", node.Id, len(node.GetChildren()), im[i]))
 	}
 	return ret
 }

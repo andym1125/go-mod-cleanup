@@ -8,20 +8,24 @@ import (
 const TRUNCATE_THRESHOLD = 10
 
 type Graph struct {
-	nodes  map[int]*GraphNode
-	ids    map[string]int
-	size   int
-	currId int
+	nodes      map[int]*GraphNode
+	ids        map[string]int
+	truncNodes *Set[int]
+	size       int
+	currId     int
 }
 
 func NewGraph() *Graph {
 	return &Graph{
-		nodes:  make(map[int]*GraphNode),
-		ids:    make(map[string]int),
-		size:   0,
-		currId: 0,
+		nodes:      make(map[int]*GraphNode),
+		ids:        make(map[string]int),
+		truncNodes: NewSet[int](),
+		size:       0,
+		currId:     0,
 	}
 }
+
+//Mutators
 
 func (g *Graph) AddEdge(from string, to string) {
 	fNode := g.MustGetNodeByValue(from)
@@ -29,26 +33,9 @@ func (g *Graph) AddEdge(from string, to string) {
 
 	fNode.Children = append(fNode.Children, tNode)
 	tNode.Parents = append(tNode.Parents, fNode)
-}
 
-func (g *Graph) GetNode(id int) (*GraphNode, error) {
-	node, exists := g.nodes[id]
-	if !exists {
-		return nil, errors.New("Node with id does not exist")
-	}
-	return node, nil
-}
-
-func (g *Graph) GetNodeByValue(val string) (*GraphNode, error) {
-	id, exists := g.ids[val]
-	if !exists {
-		return nil, errors.New("Node not found")
-	}
-	node, err := g.GetNode(id)
-	if err != nil {
-		return nil, errors.New("Node not found")
-	}
-	return node, nil
+	g.CheckTruncateNode(fNode.Id)
+	g.CheckTruncateNode(tNode.Id)
 }
 
 func (g *Graph) MustGetNode(id int) *GraphNode {
@@ -77,6 +64,43 @@ func (g *Graph) MustGetNodeByValue(value string) *GraphNode {
 		n.Value = value
 	}
 	return n
+}
+
+func (g *Graph) CheckTruncateNode(id int) (bool, error) {
+	node, err := g.GetNode(id)
+	if err != nil {
+		fmt.Printf("Fail slow @CheckTruncateNode(): %s", err)
+		return false, err
+	}
+
+	ret := len(node.Children) > TRUNCATE_THRESHOLD
+	if ret {
+		g.truncNodes.Add(id)
+	}
+
+	return ret, nil
+}
+
+//Accessors
+
+func (g *Graph) GetNode(id int) (*GraphNode, error) {
+	node, exists := g.nodes[id]
+	if !exists {
+		return nil, errors.New("Node with id does not exist")
+	}
+	return node, nil
+}
+
+func (g *Graph) GetNodeByValue(val string) (*GraphNode, error) {
+	id, exists := g.ids[val]
+	if !exists {
+		return nil, errors.New("Node not found")
+	}
+	node, err := g.GetNode(id)
+	if err != nil {
+		return nil, errors.New("Node not found")
+	}
+	return node, nil
 }
 
 func (g *Graph) GetNonChildren() []int {
@@ -143,6 +167,10 @@ func (g *Graph) Print() {
 	for _, n := range g.nodes {
 		fmt.Println(n)
 	}
+}
+
+func (g *Graph) IsTruncNode(id int) bool {
+	return g.truncNodes.Contains(id)
 }
 
 /* ===== GraphNode ===== */
