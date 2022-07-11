@@ -32,6 +32,7 @@ func init() {
 }
 
 func main() {
+	defer ExitingFs()
 	ReadDependencies(os.Args[1])
 
 	agraph = NewGraph()
@@ -122,7 +123,8 @@ func CliMenu(root int, back *Queue) {
 			edges = agraph.GetEdgesTrim(root)
 		}
 
-		WriteSVG("graph", root, agraph, edges)
+		VerifyFileStructure()
+		WriteSVG(fmt.Sprintf("%s%sgraph", DIR_NAME, string(os.PathSeparator)), root, agraph, edges)
 		CliMenu(root, back)
 	}
 }
@@ -253,6 +255,44 @@ func init() {
 	gvNodes = make(map[int]*cgraph.Node)
 	im = make(map[int]string)
 	dm = make(map[string]int)
+}
+
+/* ========== Filesys ========== */
+// Only confirmed to work with mac
+
+func VerifyFileStructure() {
+	err := os.Mkdir(DIR_NAME, os.ModePerm)
+	if err != nil && !os.IsExist(err) {
+		panic(err)
+	}
+}
+
+func WriteConfig() {
+	output := fmt.Sprintf("{TRUNCATE_THRESHOLD:%d,DIR_NAME:'%s'}", TRUNCATE_THRESHOLD, DIR_NAME)
+
+	err := os.WriteFile(fmt.Sprintf("%s%sconfig.json", DIR_NAME, string(os.PathSeparator)), []byte(output), 0666)
+	if err != nil {
+		fmt.Println(fmt.Sprintf("Dump config:%s", output))
+	}
+}
+
+func WriteDependencyKey() {
+
+}
+
+func WriteHtml() {
+
+}
+
+func StartingFs() {
+	//read
+	VerifyFileStructure()
+	WriteHtml()
+}
+
+func ExitingFs() {
+	VerifyFileStructure()
+	WriteConfig()
 }
 
 /* ========== Petty Helpers ========== */

@@ -5,8 +5,6 @@ import (
 	"fmt"
 )
 
-const TRUNCATE_THRESHOLD = 10
-
 type Graph struct {
 	nodes      map[int]*GraphNode
 	ids        map[string]int
