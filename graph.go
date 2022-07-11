@@ -89,11 +89,13 @@ func (g *Graph) GetNonChildren() []int {
 	return ret
 }
 
-func (g *Graph) GetEdges(rootId int, edges *Set, searched *Set) {
-	if searched == nil {
-		searched = NewSet()
-	}
+func (g *Graph) GetEdges(rootId int) []Edge {
+	edges := NewSet[Edge]()
+	g.getEdges(rootId, edges, NewSet[int]())
+	return edges.ToArray()
+}
 
+func (g *Graph) getEdges(rootId int, edges *Set[Edge], searched *Set[int]) {
 	if searched.Contains(rootId) {
 		return
 	}
@@ -105,17 +107,17 @@ func (g *Graph) GetEdges(rootId int, edges *Set, searched *Set) {
 	}
 	for _, n := range root.Children {
 		edges.Add(Edge{From: rootId, To: g.ids[n.Value]})
-		g.GetEdges(g.ids[n.Value], edges, searched)
+		g.getEdges(g.ids[n.Value], edges, searched)
 	}
 }
 
-func (g *Graph) GetEdgesTrim(rootId int, edges *Set, searched *Set, isRoot bool) {
-	//fmt.Println(rootId, isRoot, searched, *edges)
+func (g *Graph) GetEdgesTrim(rootId int) []Edge {
+	edges := NewSet[Edge]()
+	g.getEdgesTrim(rootId, edges, NewSet[int](), true)
+	return edges.ToArray()
+}
 
-	if searched == nil {
-		searched = NewSet()
-	}
-
+func (g *Graph) getEdgesTrim(rootId int, edges *Set[Edge], searched *Set[int], isRoot bool) {
 	if searched.Contains(rootId) {
 		return
 	}
@@ -133,7 +135,7 @@ func (g *Graph) GetEdgesTrim(rootId int, edges *Set, searched *Set, isRoot bool)
 	}
 	for _, n := range root.Children {
 		edges.Add(Edge{From: rootId, To: g.ids[n.Value]})
-		g.GetEdgesTrim(g.ids[n.Value], edges, searched, false)
+		g.getEdgesTrim(g.ids[n.Value], edges, searched, false)
 	}
 }
 

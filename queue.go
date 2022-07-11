@@ -20,25 +20,25 @@ func (q *Queue) Push(el any) {
 
 /* ===== Set ===== */
 
-type Set struct {
-	els []any
+type Set[T comparable] struct {
+	els []T
 }
 
-func NewSet() *Set {
-	return &Set{els: make([]any, 0)}
+func NewSet[T comparable]() *Set[T] {
+	return &Set[T]{els: make([]T, 0)}
 }
 
-func (s *Set) Add(el any) {
+func (s *Set[T]) Add(el T) {
 	if !s.Contains(el) {
 		s.els = append(s.els, el)
 	}
 }
 
-func (s *Set) Len() int {
+func (s *Set[T]) Len() int {
 	return len(s.els)
 }
 
-func (s *Set) Contains(el any) bool {
+func (s *Set[T]) Contains(el T) bool {
 	ret := false
 	for _, a := range s.els {
 		if a == el {
@@ -48,10 +48,16 @@ func (s *Set) Contains(el any) bool {
 	return ret
 }
 
-func (s *Set) Get() []any {
-	ret := make([]any, 0)
+func (s *Set[T]) ToArray() []T {
+	ret := make([]T, 0)
 	for _, a := range s.els {
 		ret = append(ret, a)
 	}
 	return ret
+}
+
+// ========== Nonreceiver funcs ==========
+
+type Collection interface {
+	GetAll()
 }

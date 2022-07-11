@@ -130,16 +130,7 @@ func CliMenu(root int, back *Queue) {
 	case 0:
 		CliNavigate(root, back)
 	case 1:
-
-		edgeSet := NewSet()
-		agraph.GetEdgesTrim(root, edgeSet, nil, true)
-		var edgeArr []Edge
-		for _, a := range edgeSet.Get() {
-			edgeArr = append(edgeArr, a.(Edge))
-		}
-		fmt.Println(len(edgeArr))
-
-		WriteSVG("graph", root, agraph, edgeArr)
+		WriteSVG("graph", root, agraph, agraph.GetEdgesTrim(root))
 		CliMenu(root, back)
 	}
 }
