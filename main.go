@@ -32,7 +32,7 @@ func init() {
 }
 
 func main() {
-	ReadDependencies("input.txt")
+	ReadDependencies(os.Args[1])
 
 	agraph = NewGraph()
 	for _, e := range edges {
@@ -104,6 +104,7 @@ func CliNavigate(root int, back *Queue) {
 
 	switch choice {
 	case 0:
+		//TODO: base dependency exception
 		CliMenu(root, back)
 	case 1:
 		if root == -1 {
@@ -131,11 +132,12 @@ func CliMenu(root int, back *Queue) {
 	case 1:
 
 		edgeSet := NewSet()
-		agraph.GetEdges(root, edgeSet, nil)
+		agraph.GetEdgesTrim(root, edgeSet, nil, true)
 		var edgeArr []Edge
 		for _, a := range edgeSet.Get() {
 			edgeArr = append(edgeArr, a.(Edge))
 		}
+		fmt.Println(len(edgeArr))
 
 		WriteSVG("graph", root, agraph, edgeArr)
 		CliMenu(root, back)

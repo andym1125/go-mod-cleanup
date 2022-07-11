@@ -5,6 +5,8 @@ import (
 	"fmt"
 )
 
+const TRUNCATE_THRESHOLD = 10
+
 type Graph struct {
 	nodes  map[int]*GraphNode
 	ids    map[string]int
@@ -107,6 +109,34 @@ func (g *Graph) GetEdges(rootId int, edges *Set, searched *Set) {
 	}
 }
 
+func (g *Graph) GetEdgesTrim(rootId int, edges *Set, searched *Set, isRoot bool) {
+	//fmt.Println(rootId, isRoot, searched, *edges)
+
+	if searched == nil {
+		searched = NewSet()
+	}
+
+	if searched.Contains(rootId) {
+		return
+	}
+	searched.Add(rootId)
+
+	root, err := g.GetNode(rootId)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("-", len(root.Children))
+
+	if len(root.Children) > TRUNCATE_THRESHOLD && !isRoot {
+		return
+	}
+	for _, n := range root.Children {
+		edges.Add(Edge{From: rootId, To: g.ids[n.Value]})
+		g.GetEdgesTrim(g.ids[n.Value], edges, searched, false)
+	}
+}
+
 func (g *Graph) Print() {
 	for _, n := range g.nodes {
 		fmt.Println(n)
@@ -116,8 +146,9 @@ func (g *Graph) Print() {
 /* ===== GraphNode ===== */
 
 type Edge struct {
-	From int
-	To   int
+	From  int
+	To    int
+	Trunc bool
 }
 
 type GraphNode struct {
