@@ -27,12 +27,13 @@ type Dependency struct {
 }
 
 func init() {
+	gvNodes = make(map[int]*cgraph.Node)
 	im = make(map[int]string)
 	dm = make(map[string]int)
 }
 
 func main() {
-	ReadDependencies("input.txt")
+	ReadDependencies(os.Args[1])
 
 	agraph = NewGraph()
 	for _, e := range edges {
@@ -56,28 +57,13 @@ func main() {
 		}
 	}
 
-	CliNavigate(-1, nil)
-
-	//For each base module, determine set of edges that are needed to build a graph and build it
-	// err := os.Mkdir("go_mod_graphs", 0750)
-	// if err != nil && !os.IsExist(err) {
-	// 	panic(err)
-	// }
-	// for _, baseModule := range baseModules {
-
-	// 	edgeSet := NewSet()
-	// 	graph.GetEdges(baseModule, edgeSet, nil)
-	// 	var edgeArr []Edge
-	// 	for _, item := range edgeSet.Get() { //TODO: hacky
-	// 		edgeArr = append(edgeArr, item.(Edge))
-	// 	}
-	// 	WriteSVG(fmt.Sprintf("go_mod_graphs/graph%d", baseModule), baseModule, graph, edgeArr)
-	// }
+	cliNavigate(-1, nil)
 }
 
 /* ===== CLI ===== */
 
-func CliNavigate(root int, back *Queue) {
+/* cliNavigate prints the navigate CLI dialogue */
+func cliNavigate(root int, back *Queue) {
 	fmt.Println("---" + fmt.Sprint(root))
 
 	var submodules []int
@@ -98,28 +84,30 @@ func CliNavigate(root int, back *Queue) {
 		fmt.Sprintf("Directory: %s", directory),
 		append(
 			[]string{"Module Menu", "Back"},
-			IdsToModules(submodules)...,
+			PrettyListModules(submodules)...,
 		),
 	)
 
 	switch choice {
 	case 0:
-		CliMenu(root, back)
+		cliMenu(root, back)
 	case 1:
 		if root == -1 {
-			CliNavigate(-1, nil)
+			cliNavigate(-1, nil)
 			break
 		}
 
-		newRoot := back.Poll().(int)
-		CliNavigate(newRoot, back)
+		newRoot := back.Pop().(int)
+		cliNavigate(newRoot, back)
 	default:
 		back.PushFront(root)
-		CliNavigate(submodules[choice-2], back)
+		cliNavigate(submodules[choice-2], back)
 	}
 }
 
-func CliMenu(root int, back *Queue) {
+/* cliMenu prints the menu for this dependency, to allow for certain actions to be performed on the
+directory or application. */
+func cliMenu(root int, back *Queue) {
 	choice := CliMultipleChoice(
 		fmt.Sprintf("Choices for %s", im[root]),
 		[]string{"Back to Directory", "Print SVG at this level to graph.svg..."},
@@ -127,21 +115,25 @@ func CliMenu(root int, back *Queue) {
 
 	switch choice {
 	case 0:
-		CliNavigate(root, back)
+		cliNavigate(root, back)
 	case 1:
-
-		edgeSet := NewSet()
-		agraph.GetEdges(root, edgeSet, nil)
-		var edgeArr []Edge
-		for _, a := range edgeSet.Get() {
-			edgeArr = append(edgeArr, a.(Edge))
+		var edges []Edge
+		if root == -1 {
+			for _, m := range baseModules {
+				edges = append(edges, agraph.GetEdgesTrim(m)...)
+			}
+		} else {
+			edges = agraph.GetEdgesTrim(root)
 		}
 
-		WriteSVG("graph", root, agraph, edgeArr)
-		CliMenu(root, back)
+		VerifyFileStructure()
+		WriteSVG(fmt.Sprintf("%s%sgraph", DIR_NAME, string(os.PathSeparator)), root, agraph, edges)
+		cliMenu(root, back)
 	}
 }
 
+/* CliMultipleChoice is a generic CLI function that allows for the printing of enumerated choices
+with a basic answer validation loop. */
 func CliMultipleChoice(prompt string, choices []string) int {
 
 	chose := false
@@ -174,26 +166,9 @@ func CliMultipleChoice(prompt string, choices []string) int {
 
 /* ===== Graphviz ===== */
 
+/* WriteSVG creates an SVG from the given []Edge and writes it to the given filename. The filename
+should not contain any file extension, as ".svg" will be appended in this method. */
 func WriteSVG(filestr string, baseModule int, agraph *Graph, edgeArr []Edge) {
-
-	//Split function
-	// if len(edgeArr) > 1000 {
-
-	// 	node, err := agraph.GetNode(baseModule)
-	// 	if err != nil {
-	// 		panic(err)
-	// 	}
-	// 	for _, child := range node.GetChildren() {
-	// 		edgeSet := NewSet()
-	// 		agraph.GetEdges(child.Id, edgeSet, nil)
-	// 		var edgeArr []Edge
-	// 		for _, item := range edgeSet.Get() { //TODO: hacky
-	// 			edgeArr = append(edgeArr, item.(Edge))
-	// 		}
-	// 		WriteSVG(fmt.Sprintf(filestr+"-%d", child.Id), child.Id, agraph, edgeArr)
-	// 	}
-	// }
-
 	fmt.Println(fmt.Sprintf("Graphing %s", im[baseModule]))
 
 	//Graphviz init
@@ -211,8 +186,8 @@ func WriteSVG(filestr string, baseModule int, agraph *Graph, edgeArr []Edge) {
 
 	//Add edges
 	for _, d := range edgeArr {
-		module := AddGvNode(d.From, graph)
-		dependency := AddGvNode(d.To, graph)
+		module := addGvNode(d.From, agraph.IsTruncNode(d.From), graph)
+		dependency := addGvNode(d.To, agraph.IsTruncNode(d.To), graph)
 
 		_, err := graph.CreateEdge(
 			fmt.Sprintf("%d-%d", d.From, d.To),
@@ -228,14 +203,21 @@ func WriteSVG(filestr string, baseModule int, agraph *Graph, edgeArr []Edge) {
 	}
 }
 
-func AddGvNode(id int, graph *cgraph.Graph) *cgraph.Node {
+/* addGvNode when given an id for a node, either creates a new cgraph Node or returns the one that
+already exists. "*" is appended to the node's name if the node hasn't been created and isTrunc is
+true. */
+func addGvNode(id int, isTrunc bool, graph *cgraph.Graph) *cgraph.Node {
 
 	node, exists := gvNodes[id]
 	if exists {
 		return node
 	}
 
-	n, err := graph.CreateNode(fmt.Sprint(id))
+	trunc := ""
+	if isTrunc {
+		trunc = "*"
+	}
+	n, err := graph.CreateNode(fmt.Sprintf("%d%s", id, trunc))
 	if err != nil {
 		panic(err)
 	}
@@ -243,7 +225,11 @@ func AddGvNode(id int, graph *cgraph.Graph) *cgraph.Node {
 	return n
 }
 
-/* ===== Rand ===== */
+/* ========== Filesys ========== */
+// Only confirmed to work with mac
+
+/* ReadDependencies parses the `go mod graph` output at the given filename for consumption in this
+application. */
 func ReadDependencies(filename string) {
 
 	file, err := os.Open(filename)
@@ -279,14 +265,45 @@ func ReadDependencies(filename string) {
 	}
 }
 
-func init() {
-	gvNodes = make(map[int]*cgraph.Node)
-	im = make(map[int]string)
-	dm = make(map[string]int)
+/* VerifyFileStructure ensures that any prerequisites to write commands, such as directories, exists. */
+func VerifyFileStructure() {
+	err := os.Mkdir(DIR_NAME, os.ModePerm)
+	if err != nil && !os.IsExist(err) {
+		panic(err)
+	}
+}
+
+/* writeConfig writes the config to "config.json" */
+func writeConfig() {
+	output := fmt.Sprintf("{TRUNCATE_THRESHOLD:%d,DIR_NAME:'%s'}", TRUNCATE_THRESHOLD, DIR_NAME)
+
+	err := os.WriteFile(fmt.Sprintf("%s%sconfig.json", DIR_NAME, string(os.PathSeparator)), []byte(output), 0666)
+	if err != nil {
+		fmt.Println(fmt.Sprintf("Dump config:%s", output))
+	}
+}
+
+/* writeDependencyKey writes the dependency key info in JSON format to "dependencies.json" TODO stub*/
+func writeDependencyKey() {
+
+}
+
+/* WriteHTML . TODO stub*/
+func writeHtml() {
+
+}
+
+/* startingFs performs operations that require interaction with the filesystem on the start of the
+application. TODO stub*/
+func startingFs() {
+	//read
+	VerifyFileStructure()
+	writeHtml()
 }
 
 /* ========== Petty Helpers ========== */
 
+/* AddToMap adds the dependency to the dependency-id and id-dependency maps */
 func AddToMap(dependency string) int {
 	id, exists := dm[dependency]
 
@@ -300,7 +317,9 @@ func AddToMap(dependency string) int {
 	return dm[dependency]
 }
 
-func IdsToModules(ids []int) []string {
+/* PrettyListModules converts a list of module ids to a list of strings with the following format:
+"#<id> [<num children>] <name of module>" */
+func PrettyListModules(ids []int) []string {
 	var ret []string
 	for _, i := range ids {
 
@@ -309,7 +328,7 @@ func IdsToModules(ids []int) []string {
 			panic(err)
 		}
 
-		ret = append(ret, fmt.Sprintf("[%d]\t%s", len(node.GetChildren()), im[i]))
+		ret = append(ret, fmt.Sprintf("#%d\t[%d]\t%s\t", node.Id, len(node.GetChildren()), im[i]))
 	}
 	return ret
 }

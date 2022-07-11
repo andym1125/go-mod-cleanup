@@ -1,5 +1,5 @@
 ## go-mod-cleanup
-# Version 3.
+# Version 4.
 
 # Setup
 `mkdir ~/.go-mod-cleanup`<br>
@@ -12,4 +12,4 @@
 Now, ensuring you're in your project directory:
 `go mod graph > <Your file name>`<br>
 `~/.go-mod-cleanup/modclean <Your file name>`<br>
-Optionally remove HTML files: `rm -rf go_mod_graphs`
+Optionally remove HTML files: `rm -rf gomodgraph`
