@@ -1,5 +1,5 @@
 ## go-mod-cleanup
-# Version 3.
+# Version 4.
 
 # Setup
 `mkdir ~/.go-mod-cleanup`<br>
