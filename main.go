@@ -57,22 +57,6 @@ func main() {
 	}
 
 	CliNavigate(-1, nil)
-
-	//For each base module, determine set of edges that are needed to build a graph and build it
-	// err := os.Mkdir("go_mod_graphs", 0750)
-	// if err != nil && !os.IsExist(err) {
-	// 	panic(err)
-	// }
-	// for _, baseModule := range baseModules {
-
-	// 	edgeSet := NewSet()
-	// 	graph.GetEdges(baseModule, edgeSet, nil)
-	// 	var edgeArr []Edge
-	// 	for _, item := range edgeSet.Get() { //TODO: hacky
-	// 		edgeArr = append(edgeArr, item.(Edge))
-	// 	}
-	// 	WriteSVG(fmt.Sprintf("go_mod_graphs/graph%d", baseModule), baseModule, graph, edgeArr)
-	// }
 }
 
 /* ===== CLI ===== */
@@ -104,7 +88,6 @@ func CliNavigate(root int, back *Queue) {
 
 	switch choice {
 	case 0:
-		//TODO: base dependency exception
 		CliMenu(root, back)
 	case 1:
 		if root == -1 {
@@ -130,7 +113,16 @@ func CliMenu(root int, back *Queue) {
 	case 0:
 		CliNavigate(root, back)
 	case 1:
-		WriteSVG("graph", root, agraph, agraph.GetEdgesTrim(root))
+		var edges []Edge
+		if root == -1 {
+			for _, m := range baseModules {
+				edges = append(edges, agraph.GetEdgesTrim(m)...)
+			}
+		} else {
+			edges = agraph.GetEdgesTrim(root)
+		}
+
+		WriteSVG("graph", root, agraph, edges)
 		CliMenu(root, back)
 	}
 }
@@ -168,25 +160,6 @@ func CliMultipleChoice(prompt string, choices []string) int {
 /* ===== Graphviz ===== */
 
 func WriteSVG(filestr string, baseModule int, agraph *Graph, edgeArr []Edge) {
-
-	//Split function
-	// if len(edgeArr) > 1000 {
-
-	// 	node, err := agraph.GetNode(baseModule)
-	// 	if err != nil {
-	// 		panic(err)
-	// 	}
-	// 	for _, child := range node.GetChildren() {
-	// 		edgeSet := NewSet()
-	// 		agraph.GetEdges(child.Id, edgeSet, nil)
-	// 		var edgeArr []Edge
-	// 		for _, item := range edgeSet.Get() { //TODO: hacky
-	// 			edgeArr = append(edgeArr, item.(Edge))
-	// 		}
-	// 		WriteSVG(fmt.Sprintf(filestr+"-%d", child.Id), child.Id, agraph, edgeArr)
-	// 	}
-	// }
-
 	fmt.Println(fmt.Sprintf("Graphing %s", im[baseModule]))
 
 	//Graphviz init

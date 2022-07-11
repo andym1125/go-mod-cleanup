@@ -28,6 +28,15 @@ func NewSet[T comparable]() *Set[T] {
 	return &Set[T]{els: make([]T, 0)}
 }
 
+//ensures than any duplicates are flattened (ex 3x -> 1x)
+func NewSetFromArray[T comparable](arr []T) *Set[T] {
+	set := NewSet[T]()
+	for _, a := range arr {
+		set.Add(a)
+	}
+	return set
+}
+
 func (s *Set[T]) Add(el T) {
 	if !s.Contains(el) {
 		s.els = append(s.els, el)
