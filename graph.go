@@ -196,8 +196,8 @@ func (g *Graph) IsTruncNode(id int) bool {
 
 /* Edge is a simple struct to represent an Edge in a graph. */
 type Edge struct {
-	From int
-	To   int
+	From int `json:"from"`
+	To   int `json:"to"`
 }
 
 /* GraphNode is an implementation of a node object in a graph. */
