@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -33,6 +34,7 @@ func init() {
 }
 
 func main() {
+	startingFs()
 	ReadDependencies(os.Args[1])
 
 	agraph = NewGraph()
@@ -60,7 +62,7 @@ func main() {
 	cliNavigate(-1, nil)
 }
 
-/* ===== CLI ===== */
+/* ========== CLI ========== */
 
 /* cliNavigate prints the navigate CLI dialogue */
 func cliNavigate(root int, back *Queue) {
@@ -108,9 +110,16 @@ func cliNavigate(root int, back *Queue) {
 /* cliMenu prints the menu for this dependency, to allow for certain actions to be performed on the
 directory or application. */
 func cliMenu(root int, back *Queue) {
+	isRoot := ""
+	if root == -1 {
+		isRoot = "base dependencies"
+	}
+
 	choice := CliMultipleChoice(
-		fmt.Sprintf("Choices for %s", im[root]),
-		[]string{"Back to Directory", "Print SVG at this level to graph.svg..."},
+		fmt.Sprintf("Choices for %s%s", im[root], isRoot),
+		[]string{"Back to Directory",
+			"Print SVG at this level to graph.svg...",
+			"Settings..."},
 	)
 
 	switch choice {
@@ -128,7 +137,51 @@ func cliMenu(root int, back *Queue) {
 
 		VerifyFileStructure()
 		WriteSVG(fmt.Sprintf("%s%sgraph", DIR_NAME, string(os.PathSeparator)), root, agraph, edges)
+		writeDependencyKey(fmt.Sprintf("%s%sgraph", DIR_NAME, string(os.PathSeparator)), agraph, edges)
 		cliMenu(root, back)
+	case 2:
+		cliConfig(root, back)
+	}
+}
+
+/* cliConfig prints the options to configure global settings. */
+func cliConfig(root int, back *Queue) {
+	choice := CliMultipleChoice(
+		fmt.Sprintf("Configure settings"),
+		[]string{"Back...", fmt.Sprintf("Change node truncation threshold...\t(%d)", TRUNCATE_THRESHOLD)},
+	)
+
+	switch choice {
+	case 0:
+		cliMenu(root, back)
+	case 1:
+		chose := false
+		reader := bufio.NewReader(os.Stdin)
+		newThresh := -1
+		for !chose {
+			fmt.Println(fmt.Sprintf("Enter a positive number to replace (%d) as the truncation threshold.", TRUNCATE_THRESHOLD))
+
+			input, err := reader.ReadString('\n')
+			if err != nil {
+				fmt.Println("An error occured while reading input. Please try again", err)
+				continue
+			}
+
+			newThresh, err = strconv.Atoi(strings.TrimSuffix(input, "\n"))
+			if err != nil {
+				fmt.Println("Invalid choice: Input is not a number. Please enter a number.")
+				continue
+			}
+			if newThresh < 0 {
+				fmt.Println("Invalid choice: Input is not a positive number. Please enter a positive number.")
+				continue
+			}
+			chose = true
+		}
+
+		TRUNCATE_THRESHOLD = newThresh
+		writeConfig()
+		cliConfig(root, back)
 	}
 }
 
@@ -164,7 +217,7 @@ func CliMultipleChoice(prompt string, choices []string) int {
 	return -1
 }
 
-/* ===== Graphviz ===== */
+/* ========== Graphviz ========== */
 
 /* WriteSVG creates an SVG from the given []Edge and writes it to the given filename. The filename
 should not contain any file extension, as ".svg" will be appended in this method. */
@@ -273,18 +326,42 @@ func VerifyFileStructure() {
 	}
 }
 
-/* writeConfig writes the config to "config.json" */
+/* writeConfig writes the config to "config.json". Should writew to config any time config is
+altered. */
 func writeConfig() {
-	output := fmt.Sprintf("{TRUNCATE_THRESHOLD:%d,DIR_NAME:'%s'}", TRUNCATE_THRESHOLD, DIR_NAME)
-
-	err := os.WriteFile(fmt.Sprintf("%s%sconfig.json", DIR_NAME, string(os.PathSeparator)), []byte(output), 0666)
+	config := GetConfig()
+	configByte, err := json.Marshal(config)
 	if err != nil {
-		fmt.Println(fmt.Sprintf("Dump config:%s", output))
+		fmt.Println("Dump config raw: ", config)
+		panic(err)
+	}
+
+	err = os.WriteFile(fmt.Sprintf("%s%sconfig.json", DIR_NAME, string(os.PathSeparator)), configByte, 0666)
+	if err != nil {
+		fmt.Println("Dump config: ", string(configByte))
+		panic(err)
 	}
 }
 
+/* Read config enters the settings into application memory for use. */
+func readConfig() {
+	input, err := os.ReadFile(fmt.Sprintf("%s%sconfig.json", DIR_NAME, string(os.PathSeparator)))
+	if os.IsNotExist(err) {
+		return
+	} else if err != nil {
+		panic(err)
+	}
+
+	config := &Config{}
+	err = json.Unmarshal(input, config)
+	if err != nil {
+		panic(err)
+	}
+	LoadConfig(config)
+}
+
 /* writeDependencyKey writes the dependency key info in JSON format to "dependencies.json" TODO stub*/
-func writeDependencyKey() {
+func writeDependencyKey(filename string, graph *Graph, edges []Edge) {
 
 }
 
@@ -298,7 +375,7 @@ application. TODO stub*/
 func startingFs() {
 	//read
 	VerifyFileStructure()
-	writeHtml()
+	readConfig()
 }
 
 /* ========== Petty Helpers ========== */
